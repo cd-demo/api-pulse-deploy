@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: api-pulse
+  labels:
+    app: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: web
+          image: api-pulse-web:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          env:
+            - name: APP_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: api-pulse-config
+                  key: UI_VERSION
+            - name: UI_THEME_COLOR
+              valueFrom:
+                configMapKeyRef:
+                  name: api-pulse-config
+                  key: UI_THEME_COLOR
+            - name: AUTH_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: api-pulse-config
+                  key: AUTH_URL
+            - name: ANALYTICS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: api-pulse-config
+                  key: ANALYTICS_URL
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: api-pulse
+spec:
+  selector:
+    app: web
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http

@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: api-pulse
+  labels:
+    app: auth-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+        - name: auth-service
+          image: api-pulse-auth-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4001
+          env:
+            - name: PORT
+              value: "4001"
+            - name: AUTH_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: api-pulse-config
+                  key: AUTH_VERSION
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: api-pulse-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: api-pulse-config
+                  key: DB_PORT
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: api-pulse-config
+                  key: DB_USER
+            - name: REGISTRY_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: api-pulse-config
+                  key: REGISTRY_DB
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: api-pulse-secrets
+                  key: DB_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: api-pulse-secrets
+                  key: JWT_SECRET
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4001
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4001
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: api-pulse
+spec:
+  selector:
+    app: auth-service
+  ports:
+    - port: 80
+      targetPort: 4001
+      name: http

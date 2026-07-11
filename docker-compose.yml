@@ -1,0 +1,88 @@
+# Local full-stack for API Pulse.
+# Expects sibling app repos checked out next to this deploy repo:
+#
+#   Projects/argocd-demo/
+#     api-pulse-auth-service/
+#     api-pulse-analytics-service/
+#     api-pulse-web/
+#     api-pulse-deploy/   ← you are here
+
+name: api-pulse
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: api-pulse-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: apipulse
+      MYSQL_PASSWORD: apipulse
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  auth-service:
+    build:
+      context: ../api-pulse-auth-service
+    container_name: api-pulse-auth
+    environment:
+      PORT: 4001
+      AUTH_VERSION: ${AUTH_VERSION:-1.0.0}
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me}
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: apipulse
+      DB_PASSWORD: apipulse
+      REGISTRY_DB: api_pulse_registry
+    ports:
+      - "4001:4001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  analytics-service:
+    build:
+      context: ../api-pulse-analytics-service
+    container_name: api-pulse-analytics
+    environment:
+      PORT: 4002
+      ANALYTICS_VERSION: ${ANALYTICS_VERSION:-1.0.0}
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me}
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: apipulse
+      DB_PASSWORD: apipulse
+      REGISTRY_DB: api_pulse_registry
+    ports:
+      - "4002:4002"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ../api-pulse-web
+      args:
+        VITE_APP_VERSION: ${UI_VERSION:-1.0.0}
+        VITE_UI_THEME_COLOR: ${UI_THEME_COLOR:-#0F766E}
+    container_name: api-pulse-web
+    environment:
+      APP_VERSION: ${UI_VERSION:-1.0.0}
+      UI_THEME_COLOR: ${UI_THEME_COLOR:-#0F766E}
+      AUTH_URL: ${AUTH_PUBLIC_URL:-http://localhost:4001}
+      ANALYTICS_URL: ${ANALYTICS_PUBLIC_URL:-http://localhost:4002}
+    ports:
+      - "8080:80"
+    depends_on:
+      - auth-service
+      - analytics-service
+
+volumes:
+  mysql_data:
