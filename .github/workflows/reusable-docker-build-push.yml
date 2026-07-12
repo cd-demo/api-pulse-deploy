@@ -1,6 +1,7 @@
 # Reusable: build a Docker image and push it to Docker Hub.
 #
-# Called from app repos (web / auth / analytics). Not used by this deploy repo itself.
+# Uses plain `docker build` / `docker push` (no Buildx / buildkit pull).
+# That avoids EOF failures when self-hosted runners cannot pull moby/buildkit.
 #
 # Required secrets in the *caller* repo (or org):
 #   DOCKERHUB_USERNAME
@@ -62,14 +63,21 @@ jobs:
       - name: Checkout caller repository
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Verify Docker is available
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker version
+          docker info >/dev/null
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        shell: bash
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 
       - name: Derive version tags
         id: version
@@ -80,7 +88,12 @@ jobs:
           SHA_SHORT="${GITHUB_SHA::7}"
           PKG_VERSION="1.0.0"
           if [[ -f package.json ]]; then
-            PKG_VERSION="$(node -p "require('./package.json').version || '1.0.0'")"
+            if command -v node >/dev/null 2>&1; then
+              PKG_VERSION="$(node -p "require('./package.json').version || '1.0.0'")"
+            else
+              PKG_VERSION="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' package.json | head -1)"
+              PKG_VERSION="${PKG_VERSION:-1.0.0}"
+            fi
           fi
 
           SAFE_REF="$(echo "$REF" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g' | cut -c1-120)"
@@ -107,33 +120,53 @@ jobs:
           echo "Pushing tags:"
           printf '  - %s\n' "${TAGS[@]}"
 
-      - name: Parse build-args
-        id: buildargs
+      - name: Build image
+        id: build
         shell: bash
         run: |
           set -euo pipefail
-          ARGS="${{ inputs.build_args }}"
-          {
-            echo "list<<EOF"
-            echo "VERSION=${{ steps.version.outputs.version }}"
-            if [[ -n "$ARGS" ]]; then
-              printf '%s\n' "$ARGS"
-            fi
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
+          CONTEXT="${{ inputs.context }}"
+          DOCKERFILE="${CONTEXT}/${{ inputs.dockerfile }}"
+          PRIMARY_TAG="$(echo "${{ steps.version.outputs.tags }}" | head -n1)"
 
-      - name: Build and push
+          BUILD_ARGS=()
+          BUILD_ARGS+=(--build-arg "VERSION=${{ steps.version.outputs.version }}")
+          while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            BUILD_ARGS+=(--build-arg "$line")
+          done <<< "${{ inputs.build_args }}"
+
+          echo "Building ${PRIMARY_TAG} from ${DOCKERFILE}"
+          docker build \
+            -f "$DOCKERFILE" \
+            "${BUILD_ARGS[@]}" \
+            -t "$PRIMARY_TAG" \
+            "$CONTEXT"
+
+          # Apply remaining tags to the same image
+          while IFS= read -r tag; do
+            [[ -z "$tag" || "$tag" == "$PRIMARY_TAG" ]] && continue
+            docker tag "$PRIMARY_TAG" "$tag"
+          done <<< "${{ steps.version.outputs.tags }}"
+
+          echo "primary=${PRIMARY_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Push image tags
         id: push
-        uses: docker/build-push-action@v6
-        with:
-          context: ${{ inputs.context }}
-          file: ${{ inputs.context }}/${{ inputs.dockerfile }}
-          push: true
-          tags: ${{ steps.version.outputs.tags }}
-          build-args: ${{ steps.buildargs.outputs.list }}
-          # GHA cache is for GitHub-hosted runners; self-hosted uses local Docker layer cache.
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r tag; do
+            [[ -z "$tag" ]] && continue
+            echo "Pushing ${tag}"
+            docker push "$tag"
+          done <<< "${{ steps.version.outputs.tags }}"
+
+          DIGEST="$(docker inspect --format='{{index .RepoDigests 0}}' "${{ steps.build.outputs.primary }}" 2>/dev/null || true)"
+          echo "digest=${DIGEST:-unknown}" >> "$GITHUB_OUTPUT"
 
       - name: Summary
+        shell: bash
         run: |
           {
             echo "### Docker image pushed"
@@ -141,7 +174,7 @@ jobs:
             echo "- **Image:** \`${{ inputs.image_name }}\`"
             echo "- **Digest:** \`${{ steps.push.outputs.digest }}\`"
             echo "- **Tags:**"
-            echo '${{ steps.version.outputs.tags }}' | while IFS= read -r line; do
+            while IFS= read -r line; do
               [[ -n "$line" ]] && echo "- \`$line\`"
-            done
+            done <<< "${{ steps.version.outputs.tags }}"
           } >> "$GITHUB_STEP_SUMMARY"

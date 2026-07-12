@@ -72,6 +72,8 @@ Ensure the runner is online and labeled exactly:
 
 Docker Desktop (or Docker engine) must be available on that machine for image builds.
 
+The reusable workflow uses plain `docker build` / `docker push` (not Buildx), so it does **not** need to pull `moby/buildkit` from Docker Hub.
+
 ### 5. Caller workflows
 
 - `api-pulse-web/.github/workflows/build-push.yml`
