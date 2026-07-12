@@ -13,6 +13,8 @@ App repos do **not** define their own Docker build logic. They call this reusabl
 
 `api-pulse-deploy` itself does **not** build app images.
 
+Default runner labels: `self-hosted`, `macOS`, `X64`, `beacon`.
+
 ## Image tags
 
 On **`main`**:
@@ -33,9 +35,25 @@ On **`feature-*`**:
 
 Cross-repo `uses: owner/repo/...@main` only works after the reusable file exists on `main`.
 
-### 2. Docker Hub secrets (each app repo, or a GitHub org)
+### 2. Fix “workflow was not found” (private repos) — required
 
-Create a Docker Hub **Access Token**, then add:
+Your repos are **private**. GitHub will not let an app repo call a reusable workflow from `api-pulse-deploy` until access is shared.
+
+1. Open: https://github.com/rijantakar1/api-pulse-deploy/settings/actions  
+2. Scroll to **Access** (share reusable workflows / composite actions)  
+3. Select: **Accessible from repositories owned by the user `rijantakar1`**  
+4. Save  
+
+Without this, callers fail with:
+
+```text
+error parsing called workflow
+... workflow was not found
+```
+
+Optional: make `api-pulse-deploy` public instead (also works, but exposes manifests).
+
+### 3. Docker Hub secrets (each app repo)
 
 | Secret | Value |
 |--------|--------|
@@ -44,20 +62,26 @@ Create a Docker Hub **Access Token**, then add:
 
 Repo → **Settings → Secrets and variables → Actions**.
 
-> Local `docker login` on your Mac does **not** apply to GitHub Actions. Actions need these secrets.
+> Local `docker login` on your Mac does **not** apply to GitHub Actions.
 
-### 3. Allow reusable workflows (if repos are private)
+### 4. Self-hosted runner
 
-In each **app** repo: **Settings → Actions → General → Access**  
-Allow access as needed so it can call workflows from `api-pulse-deploy`.
+Ensure the runner is online and labeled exactly:
 
-In **api-pulse-deploy**: **Settings → Actions → General → Access**  
-→ “Accessible from repositories in the 'USER' account” (or public).
+`self-hosted`, `macOS`, `X64`, `beacon`
 
-### 4. Caller workflows (already added)
+Docker Desktop (or Docker engine) must be available on that machine for image builds.
+
+### 5. Caller workflows
 
 - `api-pulse-web/.github/workflows/build-push.yml`
 - `api-pulse-auth-service/.github/workflows/build-push.yml`
 - `api-pulse-analytics-service/.github/workflows/build-push.yml`
 
-Change the Docker Hub namespace by editing `image_name:` in those callers if your Hub user is not `rijantakar1`.
+Override runner from a caller if needed:
+
+```yaml
+with:
+  image_name: rijantakar1/api-pulse-analytics-service
+  runs_on: '["self-hosted", "macOS", "ARM64", "beacon"]'
+```

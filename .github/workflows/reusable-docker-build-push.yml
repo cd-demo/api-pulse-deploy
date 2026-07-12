@@ -30,6 +30,11 @@ on:
         required: false
         type: string
         default: ""
+      runs_on:
+        description: "JSON array of runner labels (default: self-hosted beacon Mac)"
+        required: false
+        type: string
+        default: '["self-hosted", "macOS", "X64", "beacon"]'
     secrets:
       DOCKERHUB_USERNAME:
         required: true
@@ -49,7 +54,7 @@ permissions:
 jobs:
   build-and-push:
     name: Build & push
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(inputs.runs_on) }}
     outputs:
       tags: ${{ steps.version.outputs.tags }}
       digest: ${{ steps.push.outputs.digest }}
@@ -126,8 +131,7 @@ jobs:
           push: true
           tags: ${{ steps.version.outputs.tags }}
           build-args: ${{ steps.buildargs.outputs.list }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # GHA cache is for GitHub-hosted runners; self-hosted uses local Docker layer cache.
 
       - name: Summary
         run: |
