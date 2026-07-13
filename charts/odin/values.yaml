@@ -11,7 +11,7 @@ images:
     tag: 20260713-0fb3748
   ui:
     repository: rajashekhar2390/odin-ui
-    tag: 20260713-0fb3748
+    tag: 20260713-566fe52
 
 replicaCount:
   api: 1
