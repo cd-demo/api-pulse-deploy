@@ -7,7 +7,6 @@ spec:
     - name: web
       k8sServicePrefix: api-pulse-web
       port: 80
-      # Gateway path prefix (empty = root). Auth/analytics use strip-prefix rewrite.
       gatewayPath: /
     - name: auth
       k8sServicePrefix: api-pulse-auth
@@ -17,12 +16,11 @@ spec:
       k8sServicePrefix: api-pulse-analytics
       port: 80
       gatewayPath: /analytics
-  # Global defaults — must exist in charts/api-pulse values versionsActive.*
   global:
-    web: "latest"
-    auth: "latest"
-    analytics: "latest"
-  # Per-tenant overrides (only list services that differ from global).
+    web: latest
+    auth: latest
+    analytics: latest
   tenants:
-    acme: {}
+    acme:
+      web: latest
     globex: {}
