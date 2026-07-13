@@ -8,10 +8,10 @@ imagePullSecrets:
 images:
   api:
     repository: rajashekhar2390/odin-api
-    tag: latest
+    tag: 20260713-0fb3748
   ui:
     repository: rajashekhar2390/odin-ui
-    tag: latest
+    tag: 20260713-0fb3748
 
 replicaCount:
   api: 1
