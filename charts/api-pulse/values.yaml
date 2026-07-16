@@ -20,14 +20,14 @@ images:
     tag: 20260716-7c1e321
   auth:
     repository: api-pulse-auth-service
-    tag: 20260716-7c1e321
+    tag: 20260716-a4fcec8
   analytics:
     repository: api-pulse-analytics-service
-    tag: 20260716-7c1e321
+    tag: 20260716-9cbeae4
   mysql:
     repository: mysql
     # Public Hub image; PVC was initialized with MySQL 9.7.x.
-    tag: 20260716-7c1e321
+    tag: "9.7"
 
 replicaCount:
   web: 1

@@ -1,6 +1,6 @@
 # Reusable: build a Docker image and push it to Docker Hub.
 #
-# Uses plain `docker build` / `docker push` (no Buildx / buildkit pull).
+# Uses docker buildx multi-arch (linux/amd64,linux/arm64) --push.
 # That avoids EOF failures when self-hosted runners cannot pull moby/buildkit.
 #
 # Required secrets in the *caller* repo (or org):
@@ -137,7 +137,22 @@ jobs:
           echo "Pushing tags:"
           printf '  - %s\n' "${TAGS[@]}"
 
-      - name: Build image
+      - name: Set up QEMU (multi-arch)
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --privileged --rm tonistiigi/binfmt --install all
+
+      - name: Set up buildx
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker buildx version
+          docker buildx create --name api-pulse-multiarch --driver docker-container --use 2>/dev/null \
+            || docker buildx use api-pulse-multiarch
+          docker buildx inspect --bootstrap
+
+      - name: Build & push multi-arch image
         id: build
         shell: bash
         run: |
@@ -153,71 +168,31 @@ jobs:
             BUILD_ARGS+=(--build-arg "$line")
           done <<< "${{ inputs.build_args }}"
 
-          echo "Building ${PRIMARY_TAG} from ${DOCKERFILE}"
-          docker build \
-            -f "$DOCKERFILE" \
-            "${BUILD_ARGS[@]}" \
-            -t "$PRIMARY_TAG" \
-            "$CONTEXT"
-
-          # Apply remaining tags to the same image
-          while IFS= read -r tag; do
-            [[ -z "$tag" || "$tag" == "$PRIMARY_TAG" ]] && continue
-            docker tag "$PRIMARY_TAG" "$tag"
-          done <<< "${{ steps.version.outputs.tags }}"
-
-          echo "primary=${PRIMARY_TAG}" >> "$GITHUB_OUTPUT"
-
-      - name: Push image tags
-        id: push
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          push_with_retry() {
-            local tag="$1"
-            local attempt=1
-            local max=5
-            while true; do
-              echo "Pushing ${tag} (attempt ${attempt}/${max})"
-              if docker push "$tag"; then
-                return 0
-              fi
-              if (( attempt >= max )); then
-                echo "::error::Failed to push ${tag} after ${max} attempts (EOF usually means Docker Hub network/proxy drop, not a bad image URL)."
-                return 1
-              fi
-              sleep $(( attempt * 5 ))
-              attempt=$(( attempt + 1 ))
-            done
-          }
-
-          # Push :latest (or first tag) first; then the rest.
-          PRIMARY=""
+          TAG_ARGS=()
           while IFS= read -r tag; do
             [[ -z "$tag" ]] && continue
-            if [[ -z "$PRIMARY" ]]; then
-              PRIMARY="$tag"
-              push_with_retry "$tag"
-            fi
+            TAG_ARGS+=(-t "$tag")
           done <<< "${{ steps.version.outputs.tags }}"
 
-          while IFS= read -r tag; do
-            [[ -z "$tag" || "$tag" == "$PRIMARY" ]] && continue
-            push_with_retry "$tag"
-          done <<< "${{ steps.version.outputs.tags }}"
+          echo "Building multi-arch ${PRIMARY_TAG} from ${DOCKERFILE}"
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            -f "$DOCKERFILE" \
+            "${BUILD_ARGS[@]}" \
+            "${TAG_ARGS[@]}" \
+            --push \
+            "$CONTEXT"
 
-          DIGEST="$(docker inspect --format='{{index .RepoDigests 0}}' "${{ steps.build.outputs.primary }}" 2>/dev/null || true)"
-          echo "digest=${DIGEST:-unknown}" >> "$GITHUB_OUTPUT"
+          echo "primary=${PRIMARY_TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Summary
         shell: bash
         run: |
           {
-            echo "### Docker image pushed"
+            echo "### Docker image pushed (multi-arch)"
             echo ""
             echo "- **Image:** \`${{ inputs.image_name }}\`"
-            echo "- **Digest:** \`${{ steps.push.outputs.digest }}\`"
+            echo "- **Platforms:** \`linux/amd64,linux/arm64\`"
             echo "- **Tags:**"
             while IFS= read -r line; do
               [[ -n "$line" ]] && echo "- \`$line\`"

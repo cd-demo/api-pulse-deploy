@@ -38,8 +38,9 @@ def bump(path: Path, service_key: str, tag: str, *, active_only: bool = False) -
     i = 0
     while i < len(lines):
         line = lines[i]
-        stripped = line.lstrip()
-        indent = len(line) - len(stripped)
+        # Keepends=True leaves trailing \n; strip it so endswith(":") / startswith work.
+        stripped = line.lstrip().rstrip("\r\n")
+        indent = len(line) - len(line.lstrip())
 
         if stripped.startswith("images:"):
             in_images = True
