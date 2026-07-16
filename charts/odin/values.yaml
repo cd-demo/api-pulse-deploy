@@ -16,7 +16,7 @@ images:
     tag: 20260716-c30c8ad
   ui:
     repository: odin-ui
-    tag: 20260716-c30c8ad
+    tag: 20260716-2550266
 
 replicaCount:
   api: 1
