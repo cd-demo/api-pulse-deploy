@@ -43,18 +43,14 @@ versions:
 # Concurrent Deployments: one Deployment+Service per active tag.
 versionsActive:
   web:
-    - "feature-login-canary-31b9ae4"
-    - "feature-ecr-canary-demo-6357107"
-    - "20260716-7c1e321"
+    - "latest"
     - "feature-ecr-canary-demo-ce93aa7"
     - "20260716-95eeb68"
   auth:
     - "latest"
-    - "20260716-a4fcec8"
     - "20260716-945376a"
   analytics:
     - "latest"
-    - "20260716-9cbeae4"
     - "20260716-567591d"
 
 versionsActiveMax: 5
