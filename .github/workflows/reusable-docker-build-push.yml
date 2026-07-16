@@ -32,10 +32,10 @@ on:
         type: string
         default: ""
       runs_on:
-        description: "JSON array of runner labels (default: self-hosted beacon Mac)"
+        description: "JSON array of runner labels (default: self-hosted Linux argo-cd)"
         required: false
         type: string
-        default: '["self-hosted", "macOS", "X64", "beacon"]'
+        default: '["self-hosted", "X64", "Linux", "argo-cd"]'
     secrets:
       DOCKERHUB_USERNAME:
         required: true
