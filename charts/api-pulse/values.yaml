@@ -45,6 +45,7 @@ versionsActive:
   web:
     - "latest"
     - "feature-login-canary-31b9ae4"
+    - "feature-ecr-canary-demo-6357107"
   auth:
     - latest
   analytics:
