@@ -23,7 +23,7 @@ images:
     tag: 20260716-945376a
   analytics:
     repository: api-pulse-analytics-service
-    tag: 20260716-9cbeae4
+    tag: 20260716-567591d
   mysql:
     repository: mysql
     # Public Hub image; PVC was initialized with MySQL 9.7.x.
@@ -37,7 +37,7 @@ replicaCount:
 # Default / global pins (ConfigMap + tenants.yaml global).
 versions:
   auth: "20260716-945376a"
-  analytics: "20260716-9cbeae4"
+  analytics: "20260716-567591d"
   ui: "20260716-7c1e321"
 
 # Concurrent Deployments: one Deployment+Service per active tag.
@@ -54,6 +54,7 @@ versionsActive:
   analytics:
     - "latest"
     - "20260716-9cbeae4"
+    - "20260716-567591d"
 
 versionsActiveMax: 5
 
