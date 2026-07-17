@@ -21,7 +21,7 @@ spec:
         prefix: /
     route:
     - destination:
-        host: api-pulse-web-latest.api-pulse.svc.cluster.local
+        host: api-pulse-web-feature-ecr-canary-demo-ce93aa7.api-pulse.svc.cluster.local
         port:
           number: 80
   - match:
