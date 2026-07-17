@@ -22,6 +22,18 @@ Odin UI --> Odin API --> routing/tenants.yaml (+ render) --> git commit
 
 **Resolution:** for each service, `tenant[svc] ?? global[svc]`.
 
+**Demo diagram (Excalidraw):** [`docs/demo-e2e-flow.excalidraw`](./demo-e2e-flow.excalidraw) — CI → Argo CD → Odin pin → Istio rewiring.
+
+## Timing (what to expect)
+
+| Step | Typical latency |
+|------|-----------------|
+| Odin render + `kubectl apply` | **1–5 seconds** (instant rewiring) |
+| Git push → Argo auto-sync | **30–90 seconds** (if kubectl apply is off) |
+| Browser seeing new web pin | Reload / re-login after apply (cookie routes the document) |
+
+Local demos: set `ODIN_GIT_PUSH=true` and `ODIN_KUBECTL_APPLY=true` in `odin-api/.env`.
+
 ## Phase A — Platform
 
 ### 1. Multi-version Helm
