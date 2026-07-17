@@ -23,4 +23,4 @@ spec:
   tenants:
     acme: {}
     globex:
-      web: 20260717-e1eddc8
+      web: 20260717-88ea601
