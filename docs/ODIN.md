@@ -92,7 +92,9 @@ curl -sH 'X-Tenant-Slug: acme' http://localhost:8080/ | head
 curl -s http://localhost:8080/ | head   # global tag-a
 ```
 
-Environment Info in the UI shows the **pod** version after login (header attached).
+Environment Info in the UI shows the **pod** version after login. Login sets an
+`api_pulse_tenant` cookie and reloads so the HTML/JS themselves come from the
+tenant-pinned web build (browsers cannot send `X-Tenant-Slug` on navigation).
 
 ## Phase B — Odin
 
