@@ -21,7 +21,7 @@ spec:
           exact: acme
     route:
     - destination:
-        host: api-pulse-analytics-latest.api-pulse.svc.cluster.local
+        host: api-pulse-analytics-20260716-567591d.api-pulse.svc.cluster.local
         port:
           number: 80
     rewrite:
@@ -35,7 +35,7 @@ spec:
           regex: (^|.*;\s*)api_pulse_tenant=acme(;|$)
     route:
     - destination:
-        host: api-pulse-analytics-latest.api-pulse.svc.cluster.local
+        host: api-pulse-analytics-20260716-567591d.api-pulse.svc.cluster.local
         port:
           number: 80
     rewrite:
@@ -49,7 +49,7 @@ spec:
           exact: globex
     route:
     - destination:
-        host: api-pulse-analytics-latest.api-pulse.svc.cluster.local
+        host: api-pulse-analytics-20260716-567591d.api-pulse.svc.cluster.local
         port:
           number: 80
     rewrite:
@@ -63,7 +63,7 @@ spec:
           regex: (^|.*;\s*)api_pulse_tenant=globex(;|$)
     route:
     - destination:
-        host: api-pulse-analytics-latest.api-pulse.svc.cluster.local
+        host: api-pulse-analytics-20260716-567591d.api-pulse.svc.cluster.local
         port:
           number: 80
     rewrite:
@@ -74,7 +74,7 @@ spec:
     - uri: *id001
     route:
     - destination:
-        host: api-pulse-analytics-latest.api-pulse.svc.cluster.local
+        host: api-pulse-analytics-20260716-567591d.api-pulse.svc.cluster.local
         port:
           number: 80
     rewrite:
