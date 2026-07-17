@@ -41,7 +41,7 @@ spec:
           exact: globex
     route:
     - destination:
-        host: api-pulse-web-20260717-e1eddc8.api-pulse.svc.cluster.local
+        host: api-pulse-web-feature-ecr-canary-demo-ce93aa7.api-pulse.svc.cluster.local
         port:
           number: 80
   - match:
@@ -51,7 +51,7 @@ spec:
           regex: (^|.*;\s*)api_pulse_tenant=globex(;|$)
     route:
     - destination:
-        host: api-pulse-web-20260717-e1eddc8.api-pulse.svc.cluster.local
+        host: api-pulse-web-feature-ecr-canary-demo-ce93aa7.api-pulse.svc.cluster.local
         port:
           number: 80
   - match:
