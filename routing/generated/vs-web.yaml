@@ -14,30 +14,48 @@ spec:
   - api-pulse/api-pulse-gateway
   http:
   - match:
-    - headers:
+    - uri: &id001
+        prefix: /
+      headers:
         x-tenant-slug:
           exact: acme
-      uri:
-        prefix: /
     route:
     - destination:
         host: api-pulse-web-feature-ecr-canary-demo-ce93aa7.api-pulse.svc.cluster.local
         port:
           number: 80
   - match:
-    - headers:
+    - uri: *id001
+      headers:
+        cookie:
+          regex: (^|.*;\s*)api_pulse_tenant=acme(;|$)
+    route:
+    - destination:
+        host: api-pulse-web-feature-ecr-canary-demo-ce93aa7.api-pulse.svc.cluster.local
+        port:
+          number: 80
+  - match:
+    - uri: *id001
+      headers:
         x-tenant-slug:
           exact: globex
-      uri:
-        prefix: /
     route:
     - destination:
         host: api-pulse-web-latest.api-pulse.svc.cluster.local
         port:
           number: 80
   - match:
-    - uri:
-        prefix: /
+    - uri: *id001
+      headers:
+        cookie:
+          regex: (^|.*;\s*)api_pulse_tenant=globex(;|$)
+    route:
+    - destination:
+        host: api-pulse-web-latest.api-pulse.svc.cluster.local
+        port:
+          number: 80
+  - match:
+    - uri: *id001
     route:
     - destination:
         host: api-pulse-web-latest.api-pulse.svc.cluster.local

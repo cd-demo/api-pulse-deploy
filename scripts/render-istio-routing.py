@@ -11,6 +11,7 @@ Writes:
 """
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -25,6 +26,8 @@ NAMESPACE = "api-pulse"
 GATEWAY_NAME = "api-pulse-gateway"
 # Istio ingress gateway service in istio-system
 INGRESS_SELECTOR = {"istio": "ingressgateway"}
+# Set by api-pulse-web after login so document navigations (no custom headers) still route.
+TENANT_COOKIE = "api_pulse_tenant"
 
 
 def load_routing(path: Path) -> dict:
@@ -65,6 +68,55 @@ def render_gateway() -> dict:
     }
 
 
+def path_match(gateway_path: str) -> dict:
+    if gateway_path and gateway_path != "/":
+        return {"uri": {"prefix": gateway_path}}
+    return {"uri": {"prefix": "/"}}
+
+
+def path_rewrite(gateway_path: str) -> dict | None:
+    if not gateway_path or gateway_path == "/":
+        return None
+    stripped = gateway_path.rstrip("/")
+    return {
+        "uriRegexRewrite": {
+            "match": f"^{stripped}(/|$)(.*)",
+            "rewrite": "/\\2",
+        }
+    }
+
+
+def cookie_regex(slug: str) -> str:
+    # Match api_pulse_tenant=<slug> as a full cookie pair (RE2).
+    escaped = re.escape(slug)
+    return rf"(^|.*;\s*){TENANT_COOKIE}={escaped}(;|$)"
+
+
+def tenant_route_entry(
+    *,
+    match: dict,
+    prefix: str,
+    tag: str,
+    port: int,
+    gateway_path: str,
+) -> dict:
+    entry: dict = {
+        "match": [match],
+        "route": [
+            {
+                "destination": {
+                    "host": host_for(prefix, tag),
+                    "port": {"number": port},
+                }
+            }
+        ],
+    }
+    rewrite = path_rewrite(gateway_path)
+    if rewrite:
+        entry["rewrite"] = rewrite
+    return entry
+
+
 def render_virtual_service(svc: dict, spec: dict) -> dict:
     name = svc["name"]
     prefix = svc["k8sServicePrefix"]
@@ -74,71 +126,49 @@ def render_virtual_service(svc: dict, spec: dict) -> dict:
     tenants = spec.get("tenants") or {}
 
     http_routes: list[dict] = []
+    base_path = path_match(gateway_path)
 
     for slug, pins in sorted(tenants.items()):
         pins = pins or {}
         tag = resolve(global_pins, pins, name)
-        # Only emit a match when tenant overrides this service (or always for clarity).
-        # Always emit so changing only one service still has a dedicated match row.
-        match: dict = {
+        # Header match (API fetch from SPA) + cookie match (document navigation after login).
+        header_match = {
+            **base_path,
             "headers": {"x-tenant-slug": {"exact": slug}},
         }
-        if gateway_path and gateway_path != "/":
-            match["uri"] = {"prefix": gateway_path}
-        elif gateway_path == "/":
-            # Root VS: exclude /auth and /analytics via separate VS path matches on those.
-            # Web matches everything else with prefix /
-            match["uri"] = {"prefix": "/"}
-
-        route_entry: dict = {
-            "match": [match],
-            "route": [
-                {
-                    "destination": {
-                        "host": host_for(prefix, tag),
-                        "port": {"number": port},
-                    }
-                }
-            ],
+        cookie_match = {
+            **base_path,
+            "headers": {"cookie": {"regex": cookie_regex(slug)}},
         }
-        if gateway_path and gateway_path != "/":
-            # Strip gateway prefix only. Plain rewrite uri:/ can turn /auth/health into //health.
-            stripped = gateway_path.rstrip("/")
-            route_entry["rewrite"] = {
-                "uriRegexRewrite": {
-                    "match": f"^{stripped}(/|$)(.*)",
-                    "rewrite": "/\\2",
-                }
-            }
-        http_routes.append(route_entry)
+        http_routes.append(
+            tenant_route_entry(
+                match=header_match,
+                prefix=prefix,
+                tag=tag,
+                port=port,
+                gateway_path=gateway_path,
+            )
+        )
+        http_routes.append(
+            tenant_route_entry(
+                match=cookie_match,
+                prefix=prefix,
+                tag=tag,
+                port=port,
+                gateway_path=gateway_path,
+            )
+        )
 
     # Default / no header → global
     default_tag = str(global_pins[name])
-    default_entry: dict = {}
-    if gateway_path and gateway_path != "/":
-        stripped = gateway_path.rstrip("/")
-        default_entry["match"] = [{"uri": {"prefix": gateway_path}}]
-        default_entry["rewrite"] = {
-            "uriRegexRewrite": {
-                "match": f"^{stripped}(/|$)(.*)",
-                "rewrite": "/\\2",
-            }
-        }
-    else:
-        default_entry["match"] = [{"uri": {"prefix": "/"}}]
-    default_entry["route"] = [
-        {
-            "destination": {
-                "host": host_for(prefix, default_tag),
-                "port": {"number": port},
-            }
-        }
-    ]
+    default_entry = tenant_route_entry(
+        match=base_path,
+        prefix=prefix,
+        tag=default_tag,
+        port=port,
+        gateway_path=gateway_path,
+    )
     http_routes.append(default_entry)
-
-    # For web, avoid stealing /auth and /analytics: use regex or rely on VS length.
-    # Istio picks the most specific match across VirtualServices on the same gateway.
-    # Longer prefix (/auth) wins over (/).
 
     return {
         "apiVersion": "networking.istio.io/v1beta1",

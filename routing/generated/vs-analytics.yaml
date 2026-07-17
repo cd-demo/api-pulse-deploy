@@ -14,11 +14,11 @@ spec:
   - api-pulse/api-pulse-gateway
   http:
   - match:
-    - headers:
+    - uri: &id001
+        prefix: /analytics
+      headers:
         x-tenant-slug:
           exact: acme
-      uri:
-        prefix: /analytics
     route:
     - destination:
         host: api-pulse-analytics-latest.api-pulse.svc.cluster.local
@@ -29,11 +29,24 @@ spec:
         match: ^/analytics(/|$)(.*)
         rewrite: /\2
   - match:
-    - headers:
+    - uri: *id001
+      headers:
+        cookie:
+          regex: (^|.*;\s*)api_pulse_tenant=acme(;|$)
+    route:
+    - destination:
+        host: api-pulse-analytics-latest.api-pulse.svc.cluster.local
+        port:
+          number: 80
+    rewrite:
+      uriRegexRewrite:
+        match: ^/analytics(/|$)(.*)
+        rewrite: /\2
+  - match:
+    - uri: *id001
+      headers:
         x-tenant-slug:
           exact: globex
-      uri:
-        prefix: /analytics
     route:
     - destination:
         host: api-pulse-analytics-latest.api-pulse.svc.cluster.local
@@ -44,14 +57,27 @@ spec:
         match: ^/analytics(/|$)(.*)
         rewrite: /\2
   - match:
-    - uri:
-        prefix: /analytics
-    rewrite:
-      uriRegexRewrite:
-        match: ^/analytics(/|$)(.*)
-        rewrite: /\2
+    - uri: *id001
+      headers:
+        cookie:
+          regex: (^|.*;\s*)api_pulse_tenant=globex(;|$)
     route:
     - destination:
         host: api-pulse-analytics-latest.api-pulse.svc.cluster.local
         port:
           number: 80
+    rewrite:
+      uriRegexRewrite:
+        match: ^/analytics(/|$)(.*)
+        rewrite: /\2
+  - match:
+    - uri: *id001
+    route:
+    - destination:
+        host: api-pulse-analytics-latest.api-pulse.svc.cluster.local
+        port:
+          number: 80
+    rewrite:
+      uriRegexRewrite:
+        match: ^/analytics(/|$)(.*)
+        rewrite: /\2
