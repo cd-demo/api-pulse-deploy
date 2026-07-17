@@ -21,7 +21,7 @@ spec:
           exact: acme
     route:
     - destination:
-        host: api-pulse-web-20260716-95eeb68.api-pulse.svc.cluster.local
+        host: api-pulse-web-feature-ecr-canary-demo-ce93aa7.api-pulse.svc.cluster.local
         port:
           number: 80
   - match:
@@ -31,7 +31,7 @@ spec:
           regex: (^|.*;\s*)api_pulse_tenant=acme(;|$)
     route:
     - destination:
-        host: api-pulse-web-20260716-95eeb68.api-pulse.svc.cluster.local
+        host: api-pulse-web-feature-ecr-canary-demo-ce93aa7.api-pulse.svc.cluster.local
         port:
           number: 80
   - match:
