@@ -17,7 +17,7 @@ spec:
       port: 80
       gatewayPath: /analytics
   global:
-    web: latest
+    web: 20260717-e1eddc8
     auth: 20260716-945376a
     analytics: 20260716-567591d
   tenants:
