@@ -32,7 +32,9 @@ odin:
   adminUser: odin
   adminPassword: odin-admin
   jwtSecret: odin-dev-jwt-secret
-  gitPush: "true"
+  # Cluster pods have no SSH / interactive HTTPS creds. Keep false unless ODIN_GIT_TOKEN is set.
+  # For live pins in the Minikube demo, run odin-api locally (see docs/ODIN.md).
+  gitPush: "false"
   gitRepo: https://github.com/cd-demo/api-pulse-deploy.git
   gitBranch: main
   gitToken: ""

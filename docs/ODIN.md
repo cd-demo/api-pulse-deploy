@@ -34,6 +34,20 @@ Odin UI --> Odin API --> routing/tenants.yaml (+ render) --> git commit
 
 Local demos: set `ODIN_GIT_PUSH=true` and `ODIN_KUBECTL_APPLY=true` in `odin-api/.env`.
 
+**Do not port-forward cluster `odin-api` to `:4100` for pin changes** unless you set a GitHub token.
+Cluster Odin uses `https://github.com/...` with an empty token → `could not read Username for 'https://github.com'`.
+Use the local API instead (SSH remote + `kubectl apply`).
+
+Quick check: `curl -s http://localhost:4100/health` should show `"version":"0.1.0"` (local).
+If you see an ECR-style tag like `20260717-…`, a kubectl port-forward has stolen `:4100` — kill it.
+
+```bash
+# stop any kubectl port-forward on 4100, then:
+cd odin-api && set -a && source .env && set +a
+nohup node src/index.js >/tmp/odin-api.log 2>&1 &
+curl -s http://localhost:4100/health; echo
+```
+
 ## Phase A — Platform
 
 ### 1. Multi-version Helm
@@ -133,13 +147,17 @@ cd ../odin-ui && npm install && npm run dev
 # http://localhost:5174  — odin / odin-admin
 ```
 
-In-cluster: set `odin.gitToken` (PAT with contents write on `api-pulse-deploy`),
-`ODIN_GIT_PUSH=true`, MySQL host `mysql.api-pulse.svc.cluster.local`.
+In-cluster Odin only pushes to Git when `odin.gitToken` is set (PAT with contents
+write on `api-pulse-deploy`). Default `odin.gitPush` is `false` so HTTPS without a
+token does not error.
+
+For the Minikube pin demo, prefer **local** `odin-api` (SSH + `kubectl apply`).
+Only port-forward the UI if needed — do **not** forward cluster API onto `:4100`
+while the local API is running (that recreates the HTTPS username error):
 
 ```bash
 kubectl -n odin port-forward svc/odin-ui 5174:80
-kubectl -n odin port-forward svc/odin-api 4100:4100
-# Set API_URL / values odin.apiUrl to http://localhost:4100 for local UI PF
+# Local UI (odin-ui vite) should call http://localhost:4100 (local odin-api)
 ```
 
 ## Phase C — Demo script
