@@ -13,7 +13,7 @@ imagePullSecrets:
 images:
   api:
     repository: odin-api
-    tag: 20260717-67e325c
+    tag: 20260717-754654f
   ui:
     repository: odin-ui
     tag: 20260717-079f94e
