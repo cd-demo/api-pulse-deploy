@@ -4,7 +4,7 @@ ecr:
   accountId: "253155928537"
   region: us-east-1
 
-imagePullPolicy: Always
+imagePullPolicy: IfNotPresent
 
 imagePullSecrets:
   enabled: true

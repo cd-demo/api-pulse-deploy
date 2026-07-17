@@ -7,7 +7,7 @@ ecr:
   accountId: "253155928537"
   region: us-east-1
 
-imagePullPolicy: Always
+imagePullPolicy: IfNotPresent
 
 # ECR pull secret (refresh with scripts/refresh-ecr-pull-secret.sh — tokens expire ~12h).
 imagePullSecrets:
