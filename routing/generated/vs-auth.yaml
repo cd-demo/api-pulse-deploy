@@ -25,7 +25,9 @@ spec:
         port:
           number: 80
     rewrite:
-      uri: /
+      uriRegexRewrite:
+        match: ^/auth(/|$)(.*)
+        rewrite: /\2
   - match:
     - headers:
         x-tenant-slug:
@@ -38,12 +40,16 @@ spec:
         port:
           number: 80
     rewrite:
-      uri: /
+      uriRegexRewrite:
+        match: ^/auth(/|$)(.*)
+        rewrite: /\2
   - match:
     - uri:
         prefix: /auth
     rewrite:
-      uri: /
+      uriRegexRewrite:
+        match: ^/auth(/|$)(.*)
+        rewrite: /\2
     route:
     - destination:
         host: api-pulse-auth-latest.api-pulse.svc.cluster.local

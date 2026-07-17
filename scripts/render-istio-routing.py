@@ -102,15 +102,28 @@ def render_virtual_service(svc: dict, spec: dict) -> dict:
             ],
         }
         if gateway_path and gateway_path != "/":
-            route_entry["rewrite"] = {"uri": "/"}
+            # Strip gateway prefix only. Plain rewrite uri:/ can turn /auth/health into //health.
+            stripped = gateway_path.rstrip("/")
+            route_entry["rewrite"] = {
+                "uriRegexRewrite": {
+                    "match": f"^{stripped}(/|$)(.*)",
+                    "rewrite": "/\\2",
+                }
+            }
         http_routes.append(route_entry)
 
     # Default / no header → global
     default_tag = str(global_pins[name])
     default_entry: dict = {}
     if gateway_path and gateway_path != "/":
+        stripped = gateway_path.rstrip("/")
         default_entry["match"] = [{"uri": {"prefix": gateway_path}}]
-        default_entry["rewrite"] = {"uri": "/"}
+        default_entry["rewrite"] = {
+            "uriRegexRewrite": {
+                "match": f"^{stripped}(/|$)(.*)",
+                "rewrite": "/\\2",
+            }
+        }
     else:
         default_entry["match"] = [{"uri": {"prefix": "/"}}]
     default_entry["route"] = [
